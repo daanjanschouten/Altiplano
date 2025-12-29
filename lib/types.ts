@@ -35,6 +35,24 @@ export interface AyuntamientoResponse {
   centroid: Centroid;
 }
 
+export interface PostcodeResponse {
+  codigoIne: string;
+  codigoPostal: string;
+  ayuntamientoIds: string[];
+  geometry: string;
+  bounds: Bounds;
+  centroid: Centroid;
+}
+
+export interface BarrioResponse {
+  barrioId: number;
+  name: string;
+  ayuntamientoId: string;
+  geometry: string;
+  bounds: Bounds;
+  centroid: Centroid;
+}
+
 // Frontend GeoJSON types
 export interface Provincia {
   type: 'Feature';  // Literal type, not just string
@@ -55,6 +73,30 @@ export interface Ayuntamiento {
     id: string;
     name: string;
     provinciaId: string;
+    bounds: Bounds;
+    centroid: Centroid;
+  };
+  geometry: GeoJSONGeometry;
+}
+
+export interface Postcode {
+  type: 'Feature';
+  properties: {
+    id: string;
+    name: string;
+    ayuntamientoIds: string[];
+    bounds: Bounds;
+    centroid: Centroid;
+  };
+  geometry: GeoJSONGeometry;
+}
+
+export interface Barrio {
+  type: 'Feature';
+  properties: {
+    id: number;
+    name: string;
+    ayuntamientoId: string
     bounds: Bounds;
     centroid: Centroid;
   };

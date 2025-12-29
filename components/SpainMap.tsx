@@ -34,6 +34,7 @@ export default function SpainMap({
   const [provinciasData, setProvinciasData] = useState<GeoJSONCollection<Provincia> | null>(null);
   const [ayuntamientosData, setAyuntamientosData] = useState<GeoJSONCollection<Ayuntamiento> | null>(null);
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null);
+  const [selectedProvinceData, setSelectedProvinceData] = useState<{ id: string; name: string } | null>(null);
   const [selectedAyuntamiento, setSelectedAyuntamiento] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +75,7 @@ export default function SpainMap({
   // Handle province click
   const handleProvinceClick = async (feature: any, layer: L.Layer) => {
     const provinciaId = feature.properties.id || feature.properties.code;
+    const provinciaName = feature.properties.name || feature.properties.nombre || 'Unknown';
     
     if (!provinciaId) {
       console.error('Province ID not found in feature properties');
@@ -83,6 +85,7 @@ export default function SpainMap({
     try {
       setLoading(true);
       setSelectedProvince(provinciaId);
+      setSelectedProvinceData({ id: provinciaId, name: provinciaName });
       setAyuntamientosData(null); // Clear old ayuntamientos data immediately
       setSelectedAyuntamiento(null); // Clear selected ayuntamiento
       
@@ -113,9 +116,22 @@ export default function SpainMap({
   // Reset to Spain view
   const resetView = () => {
     setSelectedProvince(null);
+    setSelectedProvinceData(null);
     setAyuntamientosData(null);
     setSelectedAyuntamiento(null);
     setMapBounds(null);
+  };
+
+  // Navigate to province view (from ayuntamiento)
+  const navigateToProvince = () => {
+    setSelectedAyuntamiento(null);
+    // Keep the province selected and ayuntamientos data
+    // Just zoom back to province bounds if available
+    if (selectedProvinceData) {
+      // The province layer should still be available, so we can re-zoom to it
+      // For now, just clear the ayuntamiento selection
+      setMapBounds(null); // This will trigger a re-fit if needed
+    }
   };
 
   // Style for provinces
@@ -161,16 +177,14 @@ export default function SpainMap({
       mouseover: (e) => {
         const target = e.target;
         target.setStyle({
-          fillOpacity: 0.6,
+          fillOpacity: 0.7,
         });
       },
       mouseout: (e) => {
+        // Reset the layer style to match current state
         const target = e.target;
-        const isSelected = selectedProvince === (feature.properties.id || feature.properties.code);
-        const hasSelection = selectedProvince !== null;
-        target.setStyle({
-          fillOpacity: hasSelection ? (isSelected ? 0.5 : 0.2) : 0.4,
-        });
+        const style = provinciaStyle(feature);
+        target.setStyle(style);
       },
     });
   };
@@ -194,18 +208,16 @@ export default function SpainMap({
         });
       },
       mouseout: (e) => {
+        // Reset the layer style to match current state
         const target = e.target;
-        const isSelected = selectedAyuntamiento?.id === feature.properties.id;
-        const hasSelection = selectedAyuntamiento !== null;
-        target.setStyle({
-          fillOpacity: hasSelection ? (isSelected ? 0.6 : 0.2) : 0.5,
-        });
+        const style = ayuntamientoStyle(feature);
+        target.setStyle(style);
       },
     });
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={className}>
       <style jsx>{`
         :global(.leaflet-interactive) {
           outline: none !important;
@@ -214,8 +226,120 @@ export default function SpainMap({
           outline: none !important;
         }
       `}</style>
+      
+      {/* Breadcrumb Navigation - Above the map */}
+      <div className="bg-white px-4 py-3 rounded-t-lg shadow-md border-b">
+        <nav className="flex items-center gap-3 text-sm">
+          <span className="text-gray-500">Spain</span>
+          
+          <span className="text-gray-400">›</span>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500">Province:</span>
+            {selectedProvinceData && (
+              <button
+                onClick={navigateToProvince}
+                className={`transition-colors ${
+                  !selectedAyuntamiento 
+                    ? 'font-semibold text-gray-900 cursor-default' 
+                    : 'text-blue-600 hover:text-blue-800 hover:underline'
+                }`}
+                disabled={!selectedAyuntamiento}
+              >
+                {selectedProvinceData.name}
+              </button>
+            )}
+            <select
+              value={selectedProvinceData?.id || ""}
+              onChange={(e) => {
+                const provinceId = e.target.value;
+                if (provinceId && provinciasData) {
+                  const feature = provinciasData.features.find(f => f.properties.id === provinceId);
+                  if (feature) {
+                    // Simulate clicking on the province
+                    handleProvinceClick(feature, { getBounds: () => {
+                      // Create bounds from the feature's bounds property
+                      const b = feature.properties.bounds;
+                      return L.latLngBounds(
+                        [b.minLat, b.minLon],
+                        [b.maxLat, b.maxLon]
+                      );
+                    }} as any);
+                  }
+                }
+              }}
+              className="rounded px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-6 h-6 appearance-none cursor-pointer hover:border-yellow-600"
+              style={{ 
+                border: '1.5px solid #fbbf24',
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'center',
+                color: 'transparent'
+              }}
+              title="Select province"
+            >
+              <option value="">—</option>
+              {provinciasData?.features
+                .slice()
+                .sort((a, b) => a.properties.name.localeCompare(b.properties.name))
+                .map(feature => (
+                  <option key={feature.properties.id} value={feature.properties.id}>
+                    {feature.properties.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          
+          {selectedProvinceData && (
+            <>
+              <span className="text-gray-400">›</span>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500">Municipality:</span>
+                {selectedAyuntamiento && (
+                  <span className="font-semibold text-gray-900">
+                    {selectedAyuntamiento.name || selectedAyuntamiento.nombre || 'Municipality'}
+                  </span>
+                )}
+                <select
+                  value={selectedAyuntamiento?.id || ""}
+                  onChange={(e) => {
+                    const ayuntamientoId = e.target.value;
+                    if (ayuntamientoId && ayuntamientosData) {
+                      const feature = ayuntamientosData.features.find(f => f.properties.id === ayuntamientoId);
+                      if (feature) {
+                        handleAyuntamientoClick(feature, {} as any);
+                      }
+                    }
+                  }}
+                  className="rounded px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-6 h-6 appearance-none cursor-pointer hover:border-yellow-600"
+                  style={{ 
+                    border: '1.5px solid #fbbf24',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    color: 'transparent'
+                  }}
+                  title="Select municipality"
+                >
+                  <option value="">—</option>
+                  {ayuntamientosData?.features
+                    .slice()
+                    .sort((a, b) => a.properties.name.localeCompare(b.properties.name))
+                    .map(feature => (
+                      <option key={feature.properties.id} value={feature.properties.id}>
+                        {feature.properties.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </>
+          )}
+        </nav>
+      </div>
+      
       {/* Map Container */}
-      <div style={{ height }} className="relative z-0 rounded-lg overflow-hidden">
+      <div style={{ height }} className="relative z-0 rounded-b-lg overflow-hidden">
         {loading && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-100 bg-opacity-75">
             <div className="text-gray-600">Loading map data...</div>
@@ -242,7 +366,7 @@ export default function SpainMap({
           {/* Always show provinces */}
           {provinciasData && (
             <GeoJSON
-              key="provincias"
+              key={`provincias-${selectedProvince || 'none'}`}
               data={provinciasData}
               style={provinciaStyle}
               onEachFeature={onEachProvincia}
@@ -252,7 +376,7 @@ export default function SpainMap({
           {/* Show ayuntamientos when a province is selected */}
           {selectedProvince && ayuntamientosData && (
             <GeoJSON
-              key={`ayuntamientos-${selectedProvince}`}
+              key={`ayuntamientos-${selectedProvince}-${selectedAyuntamiento?.id || 'none'}`}
               data={ayuntamientosData}
               style={ayuntamientoStyle}
               onEachFeature={onEachAyuntamiento}
@@ -263,49 +387,6 @@ export default function SpainMap({
         </MapContainer>
       </div>
 
-      {/* Controls */}
-      {selectedProvince && (
-        <button
-          onClick={resetView}
-          className="absolute top-4 left-4 z-10 bg-white px-4 py-2 rounded-lg shadow-md hover:bg-gray-50 transition-colors"
-        >
-          ← Back to Spain
-        </button>
-      )}
-
-      {/* Metadata Panel */}
-      {showMetadata && selectedAyuntamiento && (
-        <div className="absolute bottom-4 right-4 z-10 bg-white p-4 rounded-lg shadow-lg max-w-sm">
-          <h3 className="font-semibold text-lg mb-2">
-            {selectedAyuntamiento.name || selectedAyuntamiento.nombre || 'Municipality'}
-          </h3>
-          
-          {selectedAyuntamiento.demographics && (
-            <div className="mb-2">
-              <h4 className="font-medium text-sm text-gray-700">Demographics</h4>
-              <pre className="text-xs text-gray-600 mt-1">
-                {JSON.stringify(selectedAyuntamiento.demographics, null, 2)}
-              </pre>
-            </div>
-          )}
-          
-          {selectedAyuntamiento.vitality && (
-            <div>
-              <h4 className="font-medium text-sm text-gray-700">Vitality Indicators</h4>
-              <pre className="text-xs text-gray-600 mt-1">
-                {JSON.stringify(selectedAyuntamiento.vitality, null, 2)}
-              </pre>
-            </div>
-          )}
-          
-          <button
-            onClick={() => setSelectedAyuntamiento(null)}
-            className="mt-2 text-sm text-gray-500 hover:text-gray-700"
-          >
-            Close
-          </button>
-        </div>
-      )}
     </div>
   );
 }
