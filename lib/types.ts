@@ -53,6 +53,16 @@ export interface BarrioResponse {
   centroid: Centroid;
 }
 
+export interface AcantiladoLocationResponse {
+  acantiladoLocationId: string;
+  acantiladoLocationName: string;
+  provinceId: string;
+  ayuntamientoId: string;
+  geometry: string;
+  bounds: Bounds;
+  centroid: Centroid;
+}
+
 // Frontend GeoJSON types
 export interface Provincia {
   type: 'Feature';  // Literal type, not just string
@@ -97,6 +107,19 @@ export interface Barrio {
     id: number;
     name: string;
     ayuntamientoId: string
+    bounds: Bounds;
+    centroid: Centroid;
+  };
+  geometry: GeoJSONGeometry;
+}
+
+export interface AcantiladoLocation {
+  type: 'Feature';
+  properties: {
+    id: string;
+    name: string;
+    provinceId: string;
+    ayuntamientoId: string;
     bounds: Bounds;
     centroid: Centroid;
   };

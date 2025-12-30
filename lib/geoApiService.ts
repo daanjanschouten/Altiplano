@@ -3,6 +3,7 @@ const API_BASE_URL = 'http://localhost:8080';
 
 import { Provincia, ProvinciaResponse } from "./types";
 import { Ayuntamiento, AyuntamientoResponse } from "./types";
+import { AcantiladoLocation, AcantiladoLocationResponse } from "./types";
 import { GeoJSONCollection, GeoJSONGeometry } from "./types";
 
 /**
@@ -23,8 +24,14 @@ function transformProvinciaToFeature(provincia: ProvinciaResponse): Provincia {
   };
 }
 
-function parseGeometry(geometryJson: string): GeoJSONGeometry {
-  const parsed: unknown = JSON.parse(geometryJson);
+function parseGeometry(geometryJson: string | any): GeoJSONGeometry {
+  // Handle case where geometry is already an object (not a string)
+  let parsed: unknown;
+  if (typeof geometryJson === 'string') {
+    parsed = JSON.parse(geometryJson);
+  } else {
+    parsed = geometryJson;
+  }
   
   // Runtime validation
   if (typeof parsed !== 'object' || parsed === null) {
@@ -58,6 +65,24 @@ function transformAyuntamientoToFeature(ayuntamiento: AyuntamientoResponse): Ayu
       centroid: ayuntamiento.centroid
     },
     geometry: parseGeometry(ayuntamiento.geometry),
+  };
+}
+
+/**
+ * Transform backend acantilado location response to GeoJSON Feature
+ */
+function transformAcantiladoLocationToFeature(location: AcantiladoLocationResponse): AcantiladoLocation {
+  return {
+    type: 'Feature',
+    properties: {
+      id: location.acantiladoLocationId,
+      name: location.acantiladoLocationName,
+      provinceId: location.provinceId,
+      ayuntamientoId: location.ayuntamientoId,
+      bounds: location.bounds,
+      centroid: location.centroid
+    },
+    geometry: parseGeometry(location.geometry),
   };
 }
 
@@ -114,6 +139,44 @@ export async function fetchAyuntamientosByProvinceId(provinceId: string): Promis
     };
   } catch (error) {
     console.error(`Error fetching ayuntamientos for province ${provinceId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch all acantilado locations for a given ayuntamiento with geometry
+ */
+export async function fetchAcantiladoLocationsByAyuntamientoId(ayuntamientoId: string): Promise<GeoJSONCollection<AcantiladoLocation>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/acantilado-locations/withGeometry/byAyuntamiento/${ayuntamientoId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch acantilado locations for ayuntamiento ${ayuntamientoId}: ${response.statusText}`);
+    }
+    const data: AcantiladoLocationResponse[] = await response.json();
+    
+    console.log('🔍 Raw acantilado locations data:', data);
+    console.log('🔍 Number of locations:', data?.length);
+    console.log('🔍 First location sample:', data?.[0]);
+    
+    // Transform backend response to GeoJSON FeatureCollection
+    const features = data.map((location, index) => {
+      try {
+        return transformAcantiladoLocationToFeature(location);
+      } catch (error) {
+        console.error(`❌ Error transforming location ${index}:`, error);
+        console.error('Location data:', location);
+        throw error;
+      }
+    });
+    
+    console.log('✅ Transformed features:', features);
+    
+    return {
+      type: 'FeatureCollection',
+      features: features,
+    };
+  } catch (error) {
+    console.error(`Error fetching acantilado locations for ayuntamiento ${ayuntamientoId}:`, error);
     throw error;
   }
 }
