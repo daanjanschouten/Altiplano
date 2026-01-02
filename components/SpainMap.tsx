@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { fetchProvincias, fetchAyuntamientosByProvinceId, fetchAcantiladoLocationsByAyuntamientoId, fetchDemographicDataByProvince } from '@/lib/geoApiService';
 import { Ayuntamiento, Provincia, AcantiladoLocation, GeoJSONCollection, DemographicDataLayer, LayerMetricType } from '@/lib/types';
 import { getBucketColor, getAyuntamientoBucket } from '@/lib/mapLayers';
+import { COLORS, LAYOUT } from '@/lib/constants';
 import MapLegend from './MapLegend';
 import MapColorLegend from './MapColorLegend';
 
@@ -223,7 +224,7 @@ export default function SpainMap({
     const hasSelection = selectedProvince !== null;
     
     return {
-      fillColor: '#fbbf24',
+      fillColor: COLORS.brand.main,
       weight: hasSelection ? (isSelected ? 2 : 1) : 2,
       opacity: hasSelection ? (isSelected ? 1 : 0.3) : 1,
       color: 'white',
@@ -258,7 +259,7 @@ export default function SpainMap({
     
     // Default yellow color when no layer is active or no data - use single color
     return {
-      fillColor: '#fbbf24',
+      fillColor: COLORS.brand.main,
       weight: hasSelection ? (isSelected ? 3 : 1) : 1,
       opacity: hasSelection ? (isSelected ? 1 : 0.3) : 1,
       color: 'white',
@@ -273,7 +274,7 @@ export default function SpainMap({
     const hasSelection = selectedAcantiladoLocation !== null;
     
     return {
-      fillColor: '#fbbf24',
+      fillColor: COLORS.brand.main,
       weight: hasSelection ? (isSelected ? 2 : 1) : 1,
       opacity: hasSelection ? (isSelected ? 1 : 0.3) : 1,
       color: 'white',
@@ -377,7 +378,7 @@ export default function SpainMap({
         }
       `}</style>
       
-      <div className="flex gap-4 w-[95%] mx-auto">
+      <div className="flex gap-4 mx-auto" style={{ width: LAYOUT.containerWidth }}>
         {/* Map Legend sidebar - positioned on the left */}
         <div className="flex-shrink-0">
           <MapLegend

@@ -1,31 +1,11 @@
 import { BucketNumber, BucketColors, MapLayerConfig, LayerMetricType } from './types';
+import { COLORS } from './constants';
 
 /**
  * Color scheme for bucket-based data visualization
  * Uses single color per bucket - selection is indicated by border
  */
-export const BUCKET_COLOR_SCHEME: Record<BucketNumber, BucketColors> = {
-  0: {
-    normal: '#ef4444',      // Red - strong negative growth
-    selected: '#ef4444',    // Same color when selected
-  },
-  1: {
-    normal: '#fb923c',      // Orange - moderate negative/low positive growth
-    selected: '#fb923c',    // Same color when selected
-  },
-  2: {
-    normal: '#fbbf24',      // Soft yellow - neutral (existing color)
-    selected: '#fbbf24',    // Same color when selected
-  },
-  3: {
-    normal: '#86efac',      // Light green - moderate positive growth
-    selected: '#86efac',    // Same color when selected
-  },
-  4: {
-    normal: '#22c55e',      // Dark green - strong positive growth
-    selected: '#22c55e',    // Same color when selected
-  },
-};
+export const BUCKET_COLOR_SCHEME: Record<BucketNumber, BucketColors> = COLORS.bucket as Record<BucketNumber, BucketColors>;
 
 /**
  * Get color for a bucket (same regardless of selection state)

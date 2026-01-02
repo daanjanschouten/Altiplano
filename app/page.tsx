@@ -1,11 +1,13 @@
-import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import Logo from '@/app/logo.svg';
+import SplitLayout from '@/components/SplitLayout';
 
 // Dynamically import SpainMap with no SSR to avoid Leaflet window issues
 const SpainMap = dynamic(() => import('@/components/SpainMap'), {
   ssr: false,
   loading: () => (
-    <div className="flex items-center justify-center" style={{ height: '400px' }}>
+    <div className="flex items-center justify-center" style={{ height: '600px' }}>
       <div className="text-gray-600">Loading map...</div>
     </div>
   ),
@@ -13,128 +15,150 @@ const SpainMap = dynamic(() => import('@/components/SpainMap'), {
 
 export default function Home() {
   return (
-    <>
-      {/* Hero Section */}
-      <section className="container-wide py-24 lg:py-32">
-        <div className="max-w-3xl">
-          <h1 className="font-display text-4xl font-semibold leading-tight text-gray-900 sm:text-5xl lg:text-6xl">
-            Ready when you are
-          </h1>
-          <p className="mt-6 text-lg leading-relaxed text-gray-600">
-            A second home in Spain. We'll help you make it happen.
-          </p>
-          <div className="mt-10 flex flex-wrap gap-4">
-            <Link
-              href="/contact"
-              className="rounded-full bg-brand-600 px-8 py-3 font-medium text-white transition-colors hover:bg-brand-700"
-            >
-              Get in touch
-            </Link>
-            <Link
-              href="/#services"
-              className="rounded-full border border-gray-300 px-8 py-3 font-medium text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50"
-            >
-              Our services
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section id="services" className="border-t border-gray-100 bg-gray-50 py-24">
-        <div className="container-wide">
-          <h2 className="font-display text-3xl font-semibold text-gray-900">
-            What we do
-          </h2>
-          <p className="mt-4 max-w-2xl text-gray-600">
-            From market analysis to portfolio strategy, we provide the insights
-            you need to make confident property decisions.
-          </p>
-
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <ServiceCard
-              title="Market Analysis"
-              description="Deep dives into local and regional market trends, pricing dynamics, and growth opportunities."
-            />
-            <ServiceCard
-              title="Valuation Consulting"
-              description="Data-backed property valuations that account for market conditions, comparables, and future potential."
-            />
-            <ServiceCard
-              title="Portfolio Strategy"
-              description="Strategic guidance for building, optimizing, or divesting real estate holdings."
+    <div className="min-h-screen bg-gray-50">
+      {/* Top section - logo and text with same layout as map */}
+      <SplitLayout
+        className="pt-8 pb-6"
+        left={
+          <div className="flex items-center justify-center">
+            <Image
+              src={Logo}
+              alt="Altiplano"
+              priority
+              className="h-16 w-auto"
             />
           </div>
-        </div>
-      </section>
-
-      {/* Map Preview Section */}
-      <section className="border-t border-gray-100 py-24">
-        <div className="container-wide">
-          <div className="mb-8">
-            <h2 className="font-display text-3xl font-semibold text-gray-900">
-              Explore Spain
-            </h2>
-            <p className="mt-4 max-w-2xl text-gray-600">
-              Discover investment opportunities across Spanish provinces and municipalities.
-              Click on any province to explore detailed demographic and vitality data.
-            </p>
+        }
+        right={
+          <div className="flex items-center justify-between">
+            <div className="pl-24">
+              <h1 className="font-display text-3xl font-semibold text-gray-900">
+                Ready when you are
+              </h1>
+              <p className="mt-2 text-gray-600">
+                A second home in Spain. We'll help you make it happen.
+              </p>
+            </div>
+            
+            {/* Navigation links */}
+            <div className="flex items-center gap-6">
+              <a 
+                href="#" 
+                className="text-sm text-gray-600 transition-colors hover:text-gray-900"
+              >
+                Blog
+              </a>
+              <a 
+                href="#" 
+                className="text-sm text-gray-600 transition-colors hover:text-gray-900"
+              >
+                How We Help
+              </a>
+              <a
+                href="#"
+                className="px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded transition-colors text-sm whitespace-nowrap"
+              >
+                Free Consultation ↗
+              </a>
+            </div>
           </div>
+        }
+      />
+      
+      {/* Map section */}
+      <div className="pb-8">
+        <SpainMap height="600px" showMetadata={true} />
+      </div>
 
-          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100">
-            <SpainMap height="400px" showMetadata={false} />
+      {/* How We Help section */}
+      <SplitLayout
+        className="py-12"
+        left={
+          <div /> // Empty div to maintain 300px spacing
+        }
+        right={
+          <div>
+            {/* Header with same padding as "Ready when you are" */}
+            <div className="pl-24 mb-4">
+              <h2 className="font-display text-3xl font-semibold text-gray-900">
+                Buying property in Spain can be daunting. Here's how we help.
+              </h2>
+            </div>
+
+            {/* Introductory text */}
+            <div className="pl-24 mb-8">
+              <p className="text-gray-600 max-w-2xl">
+                From your first search to the notary signing, we're with you. We handle the complexities so you can focus on finding the right place.
+              </p>
+            </div>
+
+            {/* 3 Cards */}
+            <div className="grid grid-cols-3 gap-6 mb-8">
+              <div className="bg-white p-6 rounded-lg shadow-sm ring-1 ring-gray-100">
+                <h3 className="font-semibold text-lg text-gray-900 mb-3">
+                  Language & Culture
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Native-level Spanish and local know-how so nothing gets lost in translation.
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm ring-1 ring-gray-100">
+                <h3 className="font-semibold text-lg text-gray-900 mb-3">
+                  Legal & Bureaucracy
+                </h3>
+                <p className="text-sm text-gray-600">
+                  NIE applications, contracts, taxes — we guide you through every step.
+                </p>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow-sm ring-1 ring-gray-100">
+                <h3 className="font-semibold text-lg text-gray-900 mb-3">
+                  Data-Driven Search
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Market insights and location analysis to find value others miss.
+                </p>
+              </div>
+            </div>
+
+            {/* Free Consultation button */}
+            <div className="flex justify-end mt-8">
+              <a
+                href="#"
+                className="px-6 py-3 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded transition-colors"
+              >
+                Free Consultation ↗
+              </a>
+            </div>
           </div>
+        }
+      />
 
-          <div className="mt-6 text-center">
-            <Link
-              href="/map"
-              className="inline-block text-brand-600 underline underline-offset-4 transition-colors hover:text-brand-700"
-            >
-              View full interactive map →
-            </Link>
+      {/* About Us section */}
+      <SplitLayout
+        className="py-12"
+        left={
+          <div /> // Empty div to maintain 300px spacing
+        }
+        right={
+          <div>
+            {/* Header with same padding */}
+            <div className="pl-24 mb-4">
+              <h2 className="font-display text-3xl font-semibold text-gray-900">
+                About Us
+              </h2>
+            </div>
+
+            {/* Placeholder content */}
+            <div className="pl-24">
+              <p className="text-gray-600 max-w-2xl mb-4">
+                [Placeholder content - to be replaced]
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className="border-t border-gray-100 py-24">
-        <div className="container-wide">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-display text-3xl font-semibold text-gray-900">
-              About us
-            </h2>
-            <p className="mt-6 text-lg leading-relaxed text-gray-600">
-              We're a team of real estate professionals and data analysts who
-              believe better information leads to better outcomes. Our approach
-              combines deep market expertise with modern analytical tools to
-              give you a clearer picture of value and opportunity.
-            </p>
-            <Link
-              href="/contact"
-              className="mt-8 inline-block text-brand-600 underline underline-offset-4 transition-colors hover:text-brand-700"
-            >
-              Let's talk about your project →
-            </Link>
-          </div>
-        </div>
-      </section>
-    </>
-  );
-}
-
-function ServiceCard({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-100">
-      <h3 className="font-display text-xl font-semibold text-gray-900">
-        {title}
-      </h3>
-      <p className="mt-3 text-gray-600">{description}</p>
+        }
+      />
     </div>
   );
 }

@@ -27,7 +27,7 @@ export default function MapPage() {
       
       {/* Map section - full width */}
       <div className="pb-8">
-        <SpainMap height="700px" showMetadata={true} />
+        <SpainMap height="600px" showMetadata={true} />
       </div>
       
       {/* Info cards - contained */}

@@ -1,6 +1,7 @@
 'use client';
 
 import { MAP_LAYERS } from '@/lib/mapLayers';
+import { COLORS, LAYOUT } from '@/lib/constants';
 import { LayerMetricType, GeoJSONCollection, Provincia, Ayuntamiento, AcantiladoLocation } from '@/lib/types';
 
 interface MapLegendProps {
@@ -93,7 +94,7 @@ export default function MapLegend({
   const currentLayer = MAP_LAYERS.find(layer => layer.id === activeLayer);
 
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 w-[300px] flex flex-col gap-4">
+    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 flex flex-col gap-4" style={{ width: `${LAYOUT.sidebarWidth}px` }}>
       {/* Section 1: Location */}
       <div className="border-b border-gray-200 pb-4">
         <label className="text-sm font-semibold text-gray-700 mb-2 block">
@@ -121,7 +122,7 @@ export default function MapLegend({
                   onChange={(e) => onProvinceChange(e.target.value)}
                   className="rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-5 h-5 appearance-none cursor-pointer hover:border-yellow-600"
                   style={{ 
-                    border: '1.5px solid #fbbf24',
+                    border: `1.5px solid ${COLORS.brand.main}`,
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
@@ -163,7 +164,7 @@ export default function MapLegend({
                     onChange={(e) => onAyuntamientoChange(e.target.value)}
                     className="rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-5 h-5 appearance-none cursor-pointer hover:border-yellow-600"
                     style={{ 
-                      border: '1.5px solid #fbbf24',
+                      border: `1.5px solid ${COLORS.brand.main}`,
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'center',
@@ -197,7 +198,7 @@ export default function MapLegend({
                     onChange={(e) => onLocationChange(e.target.value)}
                     className="rounded px-1 py-0.5 text-xs focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-5 h-5 appearance-none cursor-pointer hover:border-yellow-600"
                     style={{ 
-                      border: '1.5px solid #fbbf24',
+                      border: `1.5px solid ${COLORS.brand.main}`,
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'center',
