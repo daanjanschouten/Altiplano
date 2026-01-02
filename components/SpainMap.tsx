@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { fetchProvincias, fetchAyuntamientosByProvinceId, fetchAcantiladoLocationsByAyuntamientoId } from '@/lib/geoApiService';
-import { Ayuntamiento, Provincia, AcantiladoLocation, GeoJSONCollection } from '@/lib/types';
+import { fetchProvincias, fetchAyuntamientosByProvinceId, fetchAcantiladoLocationsByAyuntamientoId, fetchDemographicDataByProvince } from '@/lib/geoApiService';
+import { Ayuntamiento, Provincia, AcantiladoLocation, GeoJSONCollection, DemographicDataLayer, LayerMetricType } from '@/lib/types';
+import { getBucketColor, getAyuntamientoBucket } from '@/lib/mapLayers';
+import MapLegend from './MapLegend';
+import MapColorLegend from './MapColorLegend';
 
 interface SpainMapProps {
   height?: string;
@@ -38,9 +41,15 @@ export default function SpainMap({
   const [selectedProvinceData, setSelectedProvinceData] = useState<{ id: string; name: string } | null>(null);
   const [selectedAyuntamiento, setSelectedAyuntamiento] = useState<any>(null);
   const [selectedAcantiladoLocation, setSelectedAcantiladoLocation] = useState<any>(null);
+  const [searchType, setSearchType] = useState<'homes' | 'land'>('homes');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapBounds, setMapBounds] = useState<L.LatLngBoundsExpression | null>(null);
+  
+  // Layer state
+  const [activeLayer, setActiveLayer] = useState<string | null>('demographics');
+  const [activeMetricType, setActiveMetricType] = useState<LayerMetricType>('change');
+  const [demographicData, setDemographicData] = useState<DemographicDataLayer | null>(null);
 
   // Fix for default marker icons in Next.js - only run on client
   useEffect(() => {
@@ -73,6 +82,25 @@ export default function SpainMap({
 
     loadProvincias();
   }, []);
+
+  // Fetch demographic data when province changes and demographics layer is active
+  useEffect(() => {
+    if (selectedProvince && activeLayer === 'demographics') {
+      const loadDemographics = async () => {
+        try {
+          const data = await fetchDemographicDataByProvince(selectedProvince);
+          setDemographicData(data);
+          console.log('📊 Loaded demographic data:', data);
+        } catch (err) {
+          console.error('Failed to load demographic data:', err);
+          setDemographicData(null);
+        }
+      };
+      loadDemographics();
+    } else {
+      setDemographicData(null);
+    }
+  }, [selectedProvince, activeLayer]);
 
   // Handle province click
   const handleProvinceClick = async (feature: any, layer: L.Layer) => {
@@ -120,6 +148,14 @@ export default function SpainMap({
       return;
     }
 
+    // Toggle selection - if clicking the same ayuntamiento, deselect it
+    if (selectedAyuntamiento?.id === ayuntamientoId) {
+      setSelectedAyuntamiento(null);
+      setAcantiladoLocationsData(null);
+      setSelectedAcantiladoLocation(null);
+      return;
+    }
+
     try {
       setLoading(true);
       setSelectedAyuntamiento(feature.properties);
@@ -130,11 +166,7 @@ export default function SpainMap({
       const locations = await fetchAcantiladoLocationsByAyuntamientoId(ayuntamientoId);
       setAcantiladoLocationsData(locations);
       
-      // Zoom to the clicked ayuntamiento
-      if ('getBounds' in layer && typeof layer.getBounds === 'function') {
-        const bounds = layer.getBounds();
-        setMapBounds(bounds);
-      }
+      // Don't zoom - keep current view for visual comparison
       
       setError(null);
     } catch (err) {
@@ -147,6 +179,14 @@ export default function SpainMap({
 
   // Handle acantilado location click
   const handleAcantiladoLocationClick = (feature: any, layer: L.Layer) => {
+    const locationId = feature.properties.id;
+    
+    // Toggle selection - if clicking the same location, deselect it
+    if (selectedAcantiladoLocation?.id === locationId) {
+      setSelectedAcantiladoLocation(null);
+      return;
+    }
+    
     setSelectedAcantiladoLocation(feature.properties);
   };
 
@@ -196,14 +236,36 @@ export default function SpainMap({
     const isSelected = selectedAyuntamiento?.id === feature.properties.id;
     const hasSelection = selectedAyuntamiento !== null;
     
+    // Use bucket-based colors when demographics layer is active
+    if (activeLayer === 'demographics' && demographicData) {
+      const bucket = getAyuntamientoBucket(
+        feature.properties.id,
+        demographicData.dataByAyuntamiento,
+        activeMetricType
+      );
+      
+      if (bucket !== null) {
+        const fillColor = getBucketColor(bucket, isSelected);
+        return {
+          fillColor,
+          weight: hasSelection ? (isSelected ? 3 : 1) : 1,
+          opacity: hasSelection ? (isSelected ? 1 : 0.3) : 1,
+          color: 'white',
+          fillOpacity: hasSelection ? (isSelected ? 0.6 : 0.2) : 0.5,
+        };
+      }
+    }
+    
+    // Default yellow color when no layer is active or no data - use single color
     return {
       fillColor: '#fbbf24',
-      weight: hasSelection ? (isSelected ? 2 : 1) : 1,
+      weight: hasSelection ? (isSelected ? 3 : 1) : 1,
       opacity: hasSelection ? (isSelected ? 1 : 0.3) : 1,
       color: 'white',
       fillOpacity: hasSelection ? (isSelected ? 0.6 : 0.2) : 0.5,
     };
   };
+
 
   // Style for acantilado locations
   const acantiladoLocationStyle = (feature: any) => {
@@ -276,8 +338,12 @@ export default function SpainMap({
   // Event handlers for acantilado location layer
   const onEachAcantiladoLocation = (feature: any, layer: L.Layer) => {
     const locationName = feature.properties.name || 'Unknown';
+    const ayuntamientoName = selectedAyuntamiento?.name || '';
     
-    layer.bindTooltip(locationName, {
+    // Display as "Ayuntamiento Name | Postcode" 
+    const displayName = ayuntamientoName ? `${ayuntamientoName} | ${locationName}` : locationName;
+    
+    layer.bindTooltip(displayName, {
       permanent: false,
       direction: 'auto',
       offset: [10, 0],
@@ -311,38 +377,25 @@ export default function SpainMap({
         }
       `}</style>
       
-      {/* Breadcrumb Navigation - Above the map */}
-      <div className="bg-white px-4 py-3 rounded-t-lg shadow-md border-b">
-        <nav className="flex items-center gap-3 text-sm">
-          <span className="text-gray-500">Spain</span>
-          
-          <span className="text-gray-400">›</span>
-          
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500">Province:</span>
-            {selectedProvinceData && (
-              <button
-                onClick={navigateToProvince}
-                className={`transition-colors ${
-                  !selectedAyuntamiento 
-                    ? 'font-semibold text-gray-900 cursor-default' 
-                    : 'text-blue-600 hover:text-blue-800 hover:underline'
-                }`}
-                disabled={!selectedAyuntamiento}
-              >
-                {selectedProvinceData.name}
-              </button>
-            )}
-            <select
-              value={selectedProvinceData?.id || ""}
-              onChange={(e) => {
-                const provinceId = e.target.value;
+      <div className="flex gap-4 w-[95%] mx-auto">
+        {/* Map Legend sidebar - positioned on the left */}
+        <div className="flex-shrink-0">
+          <MapLegend
+              activeLayer={activeLayer}
+              activeMetricType={activeMetricType}
+              onLayerChange={setActiveLayer}
+              onMetricTypeChange={setActiveMetricType}
+              selectedProvinceData={selectedProvinceData}
+              selectedAyuntamiento={selectedAyuntamiento}
+              selectedAcantiladoLocation={selectedAcantiladoLocation}
+              provinciasData={provinciasData}
+              ayuntamientosData={ayuntamientosData}
+              acantiladoLocationsData={acantiladoLocationsData}
+              onProvinceChange={(provinceId) => {
                 if (provinceId && provinciasData) {
                   const feature = provinciasData.features.find(f => f.properties.id === provinceId);
                   if (feature) {
-                    // Simulate clicking on the province
                     handleProvinceClick(feature, { getBounds: () => {
-                      // Create bounds from the feature's bounds property
                       const b = feature.properties.bounds;
                       return L.latLngBounds(
                         [b.minLat, b.minLon],
@@ -352,189 +405,91 @@ export default function SpainMap({
                   }
                 }
               }}
-              className="rounded px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-6 h-6 appearance-none cursor-pointer hover:border-yellow-600"
-              style={{ 
-                border: '1.5px solid #fbbf24',
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'center',
-                color: 'transparent'
+              onAyuntamientoChange={(ayuntamientoId) => {
+                if (ayuntamientoId && ayuntamientosData) {
+                  const feature = ayuntamientosData.features.find(f => f.properties.id === ayuntamientoId);
+                  if (feature) {
+                    handleAyuntamientoClick(feature, {} as any);
+                  }
+                }
               }}
-              title="Select province"
-            >
-              <option value="">—</option>
-              {provinciasData?.features
-                .slice()
-                .sort((a, b) => a.properties.name.localeCompare(b.properties.name))
-                .map(feature => (
-                  <option key={feature.properties.id} value={feature.properties.id}>
-                    {feature.properties.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-          
-          {selectedProvinceData && (
-            <>
-              <span className="text-gray-400">›</span>
-              
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">Municipality:</span>
-                {selectedAyuntamiento && (
-                  <button
-                    onClick={navigateToAyuntamiento}
-                    className={`transition-colors ${
-                      !selectedAcantiladoLocation 
-                        ? 'font-semibold text-gray-900 cursor-default' 
-                        : 'text-blue-600 hover:text-blue-800 hover:underline'
-                    }`}
-                    disabled={!selectedAcantiladoLocation}
-                  >
-                    {selectedAyuntamiento.name || selectedAyuntamiento.nombre || 'Municipality'}
-                  </button>
-                )}
-                <select
-                  value={selectedAyuntamiento?.id || ""}
-                  onChange={(e) => {
-                    const ayuntamientoId = e.target.value;
-                    if (ayuntamientoId && ayuntamientosData) {
-                      const feature = ayuntamientosData.features.find(f => f.properties.id === ayuntamientoId);
-                      if (feature) {
-                        handleAyuntamientoClick(feature, {} as any);
-                      }
-                    }
-                  }}
-                  className="rounded px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-6 h-6 appearance-none cursor-pointer hover:border-yellow-600"
-                  style={{ 
-                    border: '1.5px solid #fbbf24',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                    color: 'transparent'
-                  }}
-                  title="Select municipality"
-                >
-                  <option value="">—</option>
-                  {ayuntamientosData?.features
-                    .slice()
-                    .sort((a, b) => a.properties.name.localeCompare(b.properties.name))
-                    .map(feature => (
-                      <option key={feature.properties.id} value={feature.properties.id}>
-                        {feature.properties.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </>
-          )}
-          
-          {selectedAyuntamiento && (
-            <>
-              <span className="text-gray-400">›</span>
-              
-              <div className="flex items-center gap-2">
-                <span className="text-gray-500">Postcode:</span>
-                {selectedAcantiladoLocation && (
-                  <span className="font-semibold text-gray-900">
-                    {selectedAcantiladoLocation.name || 'Location'}
-                  </span>
-                )}
-                <select
-                  value={selectedAcantiladoLocation?.id || ""}
-                  onChange={(e) => {
-                    const locationId = e.target.value;
-                    if (locationId && acantiladoLocationsData) {
-                      const feature = acantiladoLocationsData.features.find(f => f.properties.id === locationId);
-                      if (feature) {
-                        handleAcantiladoLocationClick(feature, {} as any);
-                      }
-                    }
-                  }}
-                  className="rounded px-1 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 bg-white w-6 h-6 appearance-none cursor-pointer hover:border-yellow-600"
-                  style={{ 
-                    border: '1.5px solid #fbbf24',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'center',
-                    color: 'transparent'
-                  }}
-                  title="Select postcode"
-                >
-                  <option value="">—</option>
-                  {acantiladoLocationsData?.features
-                    .slice()
-                    .sort((a, b) => a.properties.name.localeCompare(b.properties.name))
-                    .map(feature => (
-                      <option key={feature.properties.id} value={feature.properties.id}>
-                        {feature.properties.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </>
-          )}
-        </nav>
-      </div>
-      
-      {/* Map Container */}
-      <div style={{ height }} className="relative z-0 rounded-b-lg overflow-hidden">
-        {loading && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-100 bg-opacity-75">
-            <div className="text-gray-600">Loading map data...</div>
-          </div>
-        )}
+              onLocationChange={(locationId) => {
+                if (locationId && acantiladoLocationsData) {
+                  const feature = acantiladoLocationsData.features.find(f => f.properties.id === locationId);
+                  if (feature) {
+                    handleAcantiladoLocationClick(feature, {} as any);
+                  }
+                }
+              }}
+              onNavigateToProvince={navigateToProvince}
+              onNavigateToAyuntamiento={navigateToAyuntamiento}
+              searchType={searchType}
+              onSearchTypeChange={setSearchType}
+            />
+        </div>
         
-        {error && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
+        {/* Map Container */}
+        <div style={{ height }} className="relative z-0 flex-1 rounded-lg overflow-hidden min-w-0">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-100 bg-opacity-75">
+              <div className="text-gray-600">Loading map data...</div>
+            </div>
+          )}
+          
+          {error && (
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              {error}
+            </div>
+          )}
 
-        <MapContainer
-          center={[40.4637, -3.7492]} // Center of Spain
-          zoom={5.6}
-          style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          />
-          
-          {/* Always show provinces */}
-          {provinciasData && (
-            <GeoJSON
-              key={`provincias-${selectedProvince || 'none'}`}
-              data={provinciasData}
-              style={provinciaStyle}
-              onEachFeature={onEachProvincia}
+          {/* Color Legend Overlay - Top Right */}
+          {selectedProvince && <MapColorLegend activeLayer={activeLayer} />}
+
+          <MapContainer
+            center={[40.4637, -3.7492]} // Center of Spain
+            zoom={5.6}
+            style={{ height: '100%', width: '100%' }}
+            scrollWheelZoom={true}
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
             />
-          )}
-          
-          {/* Show ayuntamientos when a province is selected */}
-          {selectedProvince && ayuntamientosData && (
-            <GeoJSON
-              key={`ayuntamientos-${selectedProvince}-${selectedAyuntamiento?.id || 'none'}`}
-              data={ayuntamientosData}
-              style={ayuntamientoStyle}
-              onEachFeature={onEachAyuntamiento}
-            />
-          )}
-          
-          {/* Show acantilado locations when an ayuntamiento is selected */}
-          {selectedAyuntamiento && acantiladoLocationsData && (
-            <GeoJSON
-              key={`acantilado-locations-${selectedAyuntamiento.id}-${selectedAcantiladoLocation?.id || 'none'}`}
-              data={acantiladoLocationsData}
-              style={acantiladoLocationStyle}
-              onEachFeature={onEachAcantiladoLocation}
-            />
-          )}
-          
-          <MapController bounds={mapBounds} />
-        </MapContainer>
+            
+            {/* Always show provinces */}
+            {provinciasData && (
+              <GeoJSON
+                key={`provincias-${selectedProvince || 'none'}`}
+                data={provinciasData}
+                style={provinciaStyle}
+                onEachFeature={onEachProvincia}
+              />
+            )}
+            
+            {/* Show ayuntamientos when a province is selected */}
+            {selectedProvince && ayuntamientosData && (
+              <GeoJSON
+                key={`ayuntamientos-${selectedProvince}-${selectedAyuntamiento?.id || 'none'}-${activeLayer || 'none'}-${activeMetricType}`}
+                data={ayuntamientosData}
+                style={ayuntamientoStyle}
+                onEachFeature={onEachAyuntamiento}
+              />
+            )}
+            
+            {/* Show acantilado locations when an ayuntamiento is selected */}
+            {selectedAyuntamiento && acantiladoLocationsData && (
+              <GeoJSON
+                key={`acantilado-locations-${selectedAyuntamiento.id}-${selectedAcantiladoLocation?.id || 'none'}`}
+                data={acantiladoLocationsData}
+                style={acantiladoLocationStyle}
+                onEachFeature={onEachAcantiladoLocation}
+              />
+            )}
+            
+            <MapController bounds={mapBounds} />
+          </MapContainer>
+        </div>
       </div>
-
     </div>
   );
 }

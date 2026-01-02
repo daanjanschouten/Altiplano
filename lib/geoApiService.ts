@@ -4,7 +4,7 @@ const API_BASE_URL = 'http://localhost:8080';
 import { Provincia, ProvinciaResponse } from "./types";
 import { Ayuntamiento, AyuntamientoResponse } from "./types";
 import { AcantiladoLocation, AcantiladoLocationResponse } from "./types";
-import { GeoJSONCollection, GeoJSONGeometry } from "./types";
+import { GeoJSONCollection, GeoJSONGeometry, DemographicDataLayer } from "./types";
 
 /**
  * Transform backend provincia response to GeoJSON Feature
@@ -117,6 +117,23 @@ export async function fetchProvinciaById(provinciaId: string): Promise<Provincia
     return transformProvinciaToFeature(data);
   } catch (error) {
     console.error(`Error fetching provincia ${provinciaId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Fetch demographic data for all ayuntamientos in a province
+ */
+export async function fetchDemographicDataByProvince(provinceId: string): Promise<DemographicDataLayer> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/demographics/byProvince/${provinceId}/latest/range`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch demographic data for province ${provinceId}: ${response.statusText}`);
+    }
+    const data: DemographicDataLayer = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error fetching demographic data for province ${provinceId}:`, error);
     throw error;
   }
 }

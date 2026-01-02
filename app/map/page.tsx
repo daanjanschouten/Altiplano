@@ -13,21 +13,26 @@ const SpainMap = dynamic(() => import('@/components/SpainMap'), {
 export default function MapPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container-wide py-8">
-        <div className="mb-6">
+      {/* Header section - contained */}
+      <div className="container-wide py-8 pb-6">
+        <div>
           <h1 className="font-display text-3xl font-semibold text-gray-900">
-            Interactive Spain Map
+            Ready when you are
           </h1>
           <p className="mt-2 text-gray-600">
-            Explore provinces and municipalities across Spain. Click on a province to zoom in and view ayuntamiento boundaries with detailed metadata.
+            A second home in Spain. We'll help you make it happen.
           </p>
         </div>
-        
-        <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-100 p-4">
-          <SpainMap height="700px" showMetadata={true} />
-        </div>
-        
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      </div>
+      
+      {/* Map section - full width */}
+      <div className="pb-8">
+        <SpainMap height="700px" showMetadata={true} />
+      </div>
+      
+      {/* Info cards - contained */}
+      <div className="container-wide pb-8">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="bg-white p-4 rounded-lg shadow-sm ring-1 ring-gray-100">
             <h3 className="font-semibold text-sm text-gray-900">How to Use</h3>
             <p className="mt-2 text-sm text-gray-600">

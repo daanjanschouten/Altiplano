@@ -1,23 +1,25 @@
 import type { Metadata } from 'next';
-import { DM_Serif_Display, Playfair_Display } from 'next/font/google';
+import { Lato, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
-const dmSerif = DM_Serif_Display({
+const lato = Lato({
   subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-dm-serif',
+  weight: ['300', '400', '700'],
+  variable: '--font-lato',
+  display: 'swap',
 });
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
   variable: '--font-display',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: 'Your Consultancy Name',
-  description: 'Real estate insights and consultancy services',
+  title: 'Altiplano',
+  description: 'Find your second home in Spain',
 };
 
 export default function RootLayout({
@@ -26,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${dmSerif.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${lato.variable} ${playfair.variable}`}>
       <body className="flex min-h-screen flex-col bg-white font-sans text-gray-900">
         <Header />
         <main className="flex-1">{children}</main>

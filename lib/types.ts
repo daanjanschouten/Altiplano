@@ -130,3 +130,37 @@ export interface GeoJSONCollection<T> {
   type: 'FeatureCollection';
   features: T[];
 }
+
+// Demographic data layer types
+export interface AyuntamientoMetricData {
+  curr: number;           // Current value (e.g., population)
+  currBucket: number;     // Bucket for current value (0-4)
+  chgPct: number;         // Percentage change
+  chgBucket: number;      // Bucket for change percentage (0-4)
+}
+
+export interface DemographicDataLayer {
+  provinceId: string;
+  referenceYear: number;
+  comparisonYear: number;
+  dataByAyuntamiento: Record<string, AyuntamientoMetricData>;
+}
+
+// Map layer configuration types
+export type BucketNumber = 0 | 1 | 2 | 3 | 4;
+
+export interface BucketColors {
+  normal: string;      // Color when not selected
+  selected: string;    // Color when selected
+}
+
+export type LayerMetricType = 'absolute' | 'change';
+
+export interface MapLayerConfig {
+  id: string;
+  name: string;
+  metricTypes: {
+    id: LayerMetricType;
+    label: string;
+  }[];
+}
